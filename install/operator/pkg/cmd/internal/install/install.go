@@ -48,6 +48,7 @@ type Install struct {
 	addons         string
 	customResource string
 	devSupport     bool
+	openshift      bool
 	databaseImage  string
 	templateName   string
 
@@ -151,7 +152,7 @@ func (o *Install) before(_ *cobra.Command, args []string) (err error) {
 	}
 
 	o.databaseImage = defaultDatabaseImage
-	config, err := configuration.GetProperties(configuration.TemplateConfig, o.Context, nil, &v1beta1.Syndesis{})
+	config, err := configuration.GetProperties(o.Context, configuration.TemplateConfig, o.ClientTools(), &v1beta1.Syndesis{})
 	if err == nil {
 		o.databaseImage = config.Syndesis.Components.Database.Image.Get(config.Syndesis.SHA)
 	}
@@ -194,6 +195,7 @@ type RenderScope struct {
 	Tag           string
 	Namespace     string
 	DevSupport    bool
+	Openshift     bool
 	Role          string
 	Kind          string
 	EnabledAddons []string
@@ -203,7 +205,7 @@ type RenderScope struct {
 func (o *Install) install(action string, resources []unstructured.Unstructured) error {
 	updateCounter := 0
 	createCounter := 0
-	client, err := o.GetClient()
+	client, err := o.ClientTools().RuntimeClient()
 	if err != nil {
 		return err
 	}

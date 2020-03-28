@@ -19,12 +19,13 @@ package grant
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/syndesisio/syndesis/install/operator/pkg/cmd/internal"
 	"k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 const (
@@ -42,7 +43,7 @@ func TestGrant(t *testing.T) {
 	// Create a fake client to mock API calls and pass it to the cmd
 	objs := []runtime.Object{}
 	cl := fake.NewFakeClient(objs...)
-	g.Client = &cl
+	g.ClientTools().SetRuntimeClient(cl)
 
 	t.Logf("\tTest: When running `operator grant --user user`, it should create the role %s and bind it to the user %s", RoleName, user)
 	if err := g.grant(); err != nil {
@@ -93,7 +94,7 @@ func TestGrantCluster(t *testing.T) {
 	// Create a fake client to mock API calls and pass it to the cmd
 	objs := []runtime.Object{}
 	cl := fake.NewFakeClient(objs...)
-	g.Client = &cl
+	g.ClientTools().SetRuntimeClient(cl)
 
 	t.Logf("\tTest: When running `operator grant --user user --cluster`, it should create a clusterrole %s and bind it to the user %s", RoleName, user)
 	if err := g.grant(); err != nil {

@@ -7,17 +7,22 @@ module github.com/syndesisio/syndesis/install/operator
 // replace github.com/chirino/hawtgo => /Users/chirino/sandbox/hawtgo
 
 require (
+	cloud.google.com/go v0.45.1 // indirect
 	github.com/DATA-DOG/go-sqlmock v1.4.1
-	github.com/aws/aws-sdk-go v1.25.50
+	github.com/Microsoft/go-winio v0.4.14 // indirect
+	github.com/aws/aws-sdk-go v1.27.1
 	github.com/chirino/hawtgo v0.0.1
+	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7 // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/elazarl/goproxy v0.0.0-20190421051319-9d40249d3c2f // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190421051319-9d40249d3c2f // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.5
 	github.com/google/go-cmp v0.3.2-0.20191028172631-481baca67f93 // indirect
+	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/imdario/mergo v0.3.8
 	github.com/lib/pq v1.3.0
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190927182313-d4a64ec2cbd8+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0
@@ -30,6 +35,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	github.com/testcontainers/testcontainers-go v0.3.1
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
+	golang.org/x/tools v0.0.0-20200210192313-1ace956b0e17 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.17.2
@@ -38,7 +45,6 @@ require (
 	k8s.io/gengo v0.0.0-20191010091904-7fa3014cb28f
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	k8s.io/kubectl v0.0.0
-
 	sigs.k8s.io/yaml v1.1.0
 )
 
