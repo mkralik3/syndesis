@@ -23,32 +23,8 @@
     kind: Role
     name: syndesis-operator
     apiGroup: rbac.authorization.k8s.io
-- apiVersion: image.openshift.io/v1
-  kind: ImageStream
-  metadata:
-    labels:
-      app: syndesis
-      syndesis.io/app: syndesis
-      syndesis.io/type: operator
-      syndesis.io/component: syndesis-operator
-    name: syndesis-operator
-  spec:
-    tags:
-    {{if .DevSupport}}
-    - name: "latest"
-      from:
-        name: {{.Image}}:latest
-        kind: ImageStreamTag
-    {{else}}
-    - name: "{{.Tag}}"
-      from:
-        name: {{.Image}}:{{.Tag}}
-        kind: DockerImage
-      importPolicy:
-        scheduled: true
-    {{end}}
-- apiVersion: apps.openshift.io/v1
-  kind: DeploymentConfig
+- apiVersion: apps/v1
+  kind: Deployment
   metadata:
     name: syndesis-operator
     labels:
@@ -61,9 +37,10 @@
       type: Recreate
     replicas: 1
     selector:
-      syndesis.io/app: syndesis
-      syndesis.io/type: operator
-      syndesis.io/component: syndesis-operator
+      matchLabels:
+        syndesis.io/app: syndesis
+        syndesis.io/type: operator
+        syndesis.io/component: syndesis-operator
     template:
       metadata:
         labels:
@@ -75,8 +52,12 @@
         serviceAccountName: syndesis-operator
         containers:
         - name: syndesis-operator
-          image: ' '
+          image: {{.Image}}:{{.Tag}}
+        {{- if .DevSupport}}
+          imagePullPolicy: Always
+        {{else}}
           imagePullPolicy: IfNotPresent
+        {{end}}
           ports:
           - containerPort: 60000
             name: metrics
@@ -100,17 +81,3 @@
           - postgres -V
           image: '{{.DatabaseImage}}'
           name: postgres-version
-    triggers:
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - syndesis-operator
-        from:
-          kind: ImageStreamTag
-          {{- if .DevSupport}}
-          name: syndesis-operator:latest
-          {{else}}
-          name: syndesis-operator:{{.Tag}}
-          {{- end}}
-      type: ImageChange
-    - type: ConfigChange

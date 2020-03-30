@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/imdario/mergo"
-	appsv1 "github.com/openshift/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -386,7 +386,7 @@ func GetProperties(ctx context.Context, file string, clientTools *clienttools.Cl
 		return configuration, nil
 	}
 
-	databaseDeployment := &appsv1.DeploymentConfig{}
+	databaseDeployment := &appsv1.Deployment{}
 	if err := rtClient.Get(ctx, types.NamespacedName{Namespace: syndesis.Namespace, Name: "syndesis-db"}, databaseDeployment); err == nil {
 		for _, c := range databaseDeployment.Spec.Template.Spec.Containers {
 			if c.Name == "postgresql" {

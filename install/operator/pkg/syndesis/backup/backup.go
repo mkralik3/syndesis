@@ -34,8 +34,8 @@ import (
 
 	"github.com/syndesisio/syndesis/install/operator/pkg/apis/syndesis/v1beta1"
 	"github.com/syndesisio/syndesis/install/operator/pkg/generator"
-	"github.com/syndesisio/syndesis/install/operator/pkg/syndesis/configuration"
 	"github.com/syndesisio/syndesis/install/operator/pkg/syndesis/clienttools"
+	"github.com/syndesisio/syndesis/install/operator/pkg/syndesis/configuration"
 	"github.com/syndesisio/syndesis/install/operator/pkg/syndesis/operation"
 	"github.com/syndesisio/syndesis/install/operator/pkg/util"
 	"gopkg.in/yaml.v2"
@@ -310,7 +310,7 @@ func (b *Backup) backupResources() error {
 		{APIVersion: "template.openshift.io/v1", Kind: "Template"},
 		{APIVersion: "image.openshift.io/v1", Kind: "ImageStream"},
 		{APIVersion: "build.openshift.io/v1", Kind: "BuildConfig"},
-		{APIVersion: "apps.openshift.io/v1", Kind: "DeploymentConfig"},
+		{APIVersion: "apps/v1", Kind: "Deployment"},
 		{APIVersion: "route.openshift.io/v1", Kind: "Route"},
 	}
 

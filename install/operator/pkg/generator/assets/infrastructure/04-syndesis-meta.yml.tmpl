@@ -32,8 +32,8 @@
     resources:
       requests:
         storage: {{.Syndesis.Components.Meta.Resources.VolumeCapacity}}
-- apiVersion: apps.openshift.io/v1
-  kind: DeploymentConfig
+- apiVersion: apps/v1
+  kind: Deployment
   metadata:
     labels:
       app: syndesis
@@ -44,9 +44,10 @@
   spec:
     replicas: 1
     selector:
-      app: syndesis
-      syndesis.io/app: syndesis
-      syndesis.io/component: syndesis-meta
+      matchLabels:
+        app: syndesis
+        syndesis.io/app: syndesis
+        syndesis.io/component: syndesis-meta
     strategy:
       resources:
         limits:
@@ -88,14 +89,14 @@
           - name: JAEGER_SAMPLER_PARAM
             value: "{{.Syndesis.Addons.Jaeger.SamplerParam}}"
 {{end}}
-{{if .DevSupport}}
           - name: JAVA_DEBUG
             value: "true"
-          image: ' '
-{{else}}
           image: '{{ dockerImageFromComponent .Syndesis.Components.Meta.Image .Syndesis.SHA }}'
-{{end}}
+        {{if .DevSupport}}
+          imagePullPolicy: Always
+        {{else}}
           imagePullPolicy: IfNotPresent
+        {{end}}
           readinessProbe:
             httpGet:
               path: /health
@@ -141,35 +142,6 @@
         - name: config-volume
           configMap:
             name: syndesis-meta-config
-    triggers:
-    - type: ConfigChange
-{{if .DevSupport}}
-    - type: ImageChange
-      imageChangeParams:
-        automatic: true
-        containerNames:
-        - syndesis-meta
-        from:
-          kind: ImageStreamTag
-          name: syndesis-meta:latest
-          namespace: {{.OpenShiftProject}}
-
-- apiVersion: image.openshift.io/v1
-  kind: ImageStream
-  metadata:
-    name: syndesis-meta
-    labels:
-      app: syndesis
-      syndesis.io/app: syndesis
-      syndesis.io/type: infrastructure
-      syndesis.io/component: syndesis-meta
-  spec:
-    tags:
-    - name: "latest"
-      from:
-        kind: ImageStreamTag
-        name: 'syndesis-meta:latest'
-{{end}}
 
 - apiVersion: v1
   kind: ConfigMap
