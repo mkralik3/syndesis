@@ -28,9 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "k8s.io/api/core/v1"
+	gofake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/rest/fake"
+	restfake "k8s.io/client-go/rest/fake"
 	"k8s.io/kubectl/pkg/scheme"
 
 	"k8s.io/client-go/kubernetes"
@@ -38,6 +39,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/syndesisio/syndesis/install/operator/pkg/apis/syndesis/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	discoveryfake "k8s.io/client-go/discovery/fake"
 )
 
 func Test_loadFromFile(t *testing.T) {
@@ -87,6 +90,7 @@ func Test_setConfigFromEnv(t *testing.T) {
 				Productized: true,
 				ProductName: "something",
 				DevSupport:  true,
+				Openshift:   false,
 				Syndesis: SyndesisConfig{
 					RouteHostname: "route",
 					Addons: AddonsSpec{
@@ -127,6 +131,7 @@ func Test_setConfigFromEnv(t *testing.T) {
 				Productized: true,
 				ProductName: "something",
 				DevSupport:  true,
+				Openshift:   false,
 				Syndesis: SyndesisConfig{
 					RouteHostname: "route",
 					Addons: AddonsSpec{
@@ -631,10 +636,10 @@ func Test_postgreSQLVersionFromInitPod(t *testing.T) {
 	defer func() { os.Unsetenv("POD_NAME") }()
 
 	// this simply returns the same HTTP response for every request
-	fakeClient := &fake.RESTClient{
+	fakeClient := &restfake.RESTClient{
 		GroupVersion:         v1.SchemeGroupVersion,
 		NegotiatedSerializer: scheme.Codecs,
-		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+		Client: restfake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 			expected := "http://localhost/apis/v1/namespaces/syndesis/pods/syndesis-operator-3-crpjp/log?container=postgres-version"
 			if req.URL.String() != expected {
 				t.Errorf("Expecting to fetch pod log via URL like `%s`, but it was `%s`", expected, req.URL.String())
@@ -664,5 +669,45 @@ func Test_postgreSQLVersionFromInitPod(t *testing.T) {
 
 	if version != 9.6 {
 		t.Errorf("Expecting that version would be 9.6, but it was %f", version)
+	}
+}
+
+func Test_IsPlatformOpenshiftExpectTrue(t *testing.T) {
+
+	res1 := metav1.APIResourceList{
+		GroupVersion: "some.generic.api.one/7.6",
+	}
+	res2 := metav1.APIResourceList{
+		GroupVersion: "apps.openshift.io/4.0",
+	}
+	res3 := metav1.APIResourceList{
+		GroupVersion: "some.generic.api.two/8.2",
+	}
+
+	testCases := []struct {
+		name     string
+		resList  []*metav1.APIResourceList
+		expected bool
+	}{
+		{"All resources with Openshift so expect true", []*metav1.APIResourceList{&res1, &res2, &res3}, true},
+		{"No Openshift resource so expect false", []*metav1.APIResourceList{&res1, &res3}, false},
+		{"No resources so expect false", []*metav1.APIResourceList{}, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			api := gofake.NewSimpleClientset()
+			fd := api.Discovery().(*discoveryfake.FakeDiscovery)
+			fd.Resources = tc.resList
+
+			oc, err := IsPlatformOpenshift(api)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if oc != tc.expected {
+				t.Errorf("Expected result was %t but function returned %t", tc.expected, oc)
+			}
+		})
 	}
 }

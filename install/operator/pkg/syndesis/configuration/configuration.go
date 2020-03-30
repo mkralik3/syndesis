@@ -43,6 +43,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/syndesisio/syndesis/install/operator/pkg/apis/syndesis/v1beta1"
@@ -62,6 +63,7 @@ type Config struct {
 	Productized                bool
 	Version                    string         // Syndesis version
 	DevSupport                 bool           // If set to true, pull docker images from imagetag instead of upstream source
+	Openshift                  bool           // Set to true if the API server is determined to support Openshift API libraries
 	Scheduled                  bool           // Legacy parameter to set scheduled:true in the imagestreams, but we dont use many imagestreams nowadays
 	ProductName                string         // Usually syndesis or fuse-online
 	PrometheusRules            string         // If some extra rules for prometheus need to be specified, they are defined here
@@ -296,6 +298,37 @@ func GetAddons(configuration Config) []AddonInstance {
 }
 
 /*
+ * For testing if the giving platform is Openshift
+ */
+func IsPlatformOpenshift(apiClient kubernetes.Interface) (bool, error) {
+	if apiClient == nil {
+		return false, nil
+	}
+
+	apis, err := apiClient.Discovery().ServerGroups()
+	if err != nil {
+		return false, err
+	}
+
+	for _, api := range apis.Groups {
+		//
+		// By definition an API Server supporting Openshift APIs
+		// is more than likely going to be Openshift or closely
+		// compatible.
+		//
+		// TODO
+		// Consider whether to restrict this to certain APIs, eg.
+		// images.openshift.io which supports ImageStreams.
+		//
+		if strings.Contains(api.Name, "openshift") {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+/*
 / Returns all processed configurations for Syndesis
 
  - Default values for configuration are loaded from file
@@ -310,13 +343,25 @@ func GetProperties(ctx context.Context, file string, clientTools *clienttools.Cl
 		return nil, err
 	}
 
+	var apiClient kubernetes.Interface
 	var rtClient client.Client
 	var err error
 	if clientTools != nil {
+		apiClient, err = clientTools.ApiClient()
+		if err != nil {
+			return nil, err
+		}
+
 		rtClient, err = clientTools.RuntimeClient()
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if os, err := IsPlatformOpenshift(apiClient); err != nil {
+		return nil, err
+	} else {
+		configuration.Openshift = os
 	}
 
 	configuration.OpenShiftProject = syndesis.Namespace

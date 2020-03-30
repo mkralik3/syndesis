@@ -146,8 +146,19 @@ func (o *Install) before(_ *cobra.Command, args []string) (err error) {
 		o.ejectedResources = []unstructured.Unstructured{}
 	}
 
+	apiClient, err := o.ClientTools().ApiClient()
+	if err != nil {
+		return err
+	}
+
+	o.openshift, err = configuration.IsPlatformOpenshift(apiClient)
+	if err != nil {
+		return err
+	}
+
 	// The default operator image is not valid /w dev mode since it can't have a repository in the image name.
-	if o.devSupport && o.image == pkg.DefaultOperatorImage {
+	// Not applicable on other platforms so check for Openshift
+	if o.devSupport && o.image == pkg.DefaultOperatorImage && o.openshift {
 		o.image = "syndesis-operator"
 	}
 
@@ -253,6 +264,7 @@ func (o *Install) render(fromFile string) ([]unstructured.Unstructured, error) {
 		Image:         o.image,
 		Tag:           o.tag,
 		DevSupport:    o.devSupport,
+		Openshift:     o.openshift,
 		Role:          RoleName,
 		Kind:          "Role",
 		EnabledAddons: addons,
