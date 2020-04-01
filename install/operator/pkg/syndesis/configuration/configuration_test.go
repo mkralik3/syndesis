@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/version"
 
 	v1 "k8s.io/api/core/v1"
 	gofake "k8s.io/client-go/kubernetes/fake"
@@ -90,7 +90,10 @@ func Test_setConfigFromEnv(t *testing.T) {
 				Productized: true,
 				ProductName: "something",
 				DevSupport:  true,
-				Openshift:   false,
+				ApiServer: ApiServerSpec{
+					Version:   "1.16",
+					Openshift: false,
+				},
 				Syndesis: SyndesisConfig{
 					RouteHostname: "route",
 					Addons: AddonsSpec{
@@ -131,7 +134,10 @@ func Test_setConfigFromEnv(t *testing.T) {
 				Productized: true,
 				ProductName: "something",
 				DevSupport:  true,
-				Openshift:   false,
+				ApiServer: ApiServerSpec{
+					Version:   "1.16",
+					Openshift: false,
+				},
 				Syndesis: SyndesisConfig{
 					RouteHostname: "route",
 					Addons: AddonsSpec{
@@ -541,9 +547,8 @@ func Test_setBoolFromEnv(t *testing.T) {
 
 func TestConfig_SetRoute(t *testing.T) {
 	type args struct {
-		ctx      context.Context
-		client   client.Client
-		syndesis *v1beta1.Syndesis
+		ctx           context.Context
+		routeHostname string
 	}
 	tests := []struct {
 		name    string
@@ -553,14 +558,23 @@ func TestConfig_SetRoute(t *testing.T) {
 		want    string
 	}{
 		{
+			name: "ROUTE_HOSTNAME environment variable NOT set, config.RouteHostname should take the value as given",
+			args: args{
+				ctx:           context.TODO(),
+				routeHostname: "my_route_name",
+			},
+			env:     map[string]string{},
+			wantErr: false,
+			want:    "my_route_name",
+		},
+		{
 			name: "If ROUTE_HOSTNAME environment variable is set, config.RouteHostname should take that value",
 			args: args{
-				ctx:      context.TODO(),
-				client:   nil,
-				syndesis: nil,
+				ctx:           context.TODO(),
+				routeHostname: "my_route_name",
 			},
-			wantErr: false,
 			env:     map[string]string{"ROUTE_HOSTNAME": "some_value"},
+			wantErr: false,
 			want:    "some_value",
 		},
 	}
@@ -571,7 +585,7 @@ func TestConfig_SetRoute(t *testing.T) {
 			}
 
 			config := getConfigLiteral()
-			if err := config.SetRoute(tt.args.ctx, tt.args.client, tt.args.syndesis); (err != nil) != tt.wantErr {
+			if err := config.SetRoute(tt.args.ctx, tt.args.routeHostname); (err != nil) != tt.wantErr {
 				t.Errorf("SetRoute() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, config.Syndesis.RouteHostname, tt.want)
@@ -672,7 +686,7 @@ func Test_postgreSQLVersionFromInitPod(t *testing.T) {
 	}
 }
 
-func Test_IsPlatformOpenshiftExpectTrue(t *testing.T) {
+func Test_IsPlatformOpenshift(t *testing.T) {
 
 	res1 := metav1.APIResourceList{
 		GroupVersion: "some.generic.api.one/7.6",
@@ -699,6 +713,10 @@ func Test_IsPlatformOpenshiftExpectTrue(t *testing.T) {
 			api := gofake.NewSimpleClientset()
 			fd := api.Discovery().(*discoveryfake.FakeDiscovery)
 			fd.Resources = tc.resList
+			fd.FakedServerVersion = &version.Info{
+				Major: "1",
+				Minor: "16",
+			}
 
 			oc, err := IsPlatformOpenshift(api)
 			if err != nil {
@@ -707,6 +725,34 @@ func Test_IsPlatformOpenshiftExpectTrue(t *testing.T) {
 
 			if oc != tc.expected {
 				t.Errorf("Expected result was %t but function returned %t", tc.expected, oc)
+			}
+		})
+	}
+}
+
+func Test_ApiVersion(t *testing.T) {
+	testCases := []struct {
+		name     string
+		version  version.Info
+		expected string
+	}{
+		{"Testing version 1.11", version.Info{Major: "1", Minor: "11"}, "1.11"},
+		{"Testing version 1.22", version.Info{Major: "1", Minor: "22"}, "1.22"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			api := gofake.NewSimpleClientset()
+			fd := api.Discovery().(*discoveryfake.FakeDiscovery)
+			fd.FakedServerVersion = &tc.version
+
+			v, err := ApiVersion(api)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if v != tc.expected {
+				t.Errorf("Expected result was %s but function returned %s", tc.expected, v)
 			}
 		})
 	}

@@ -159,7 +159,8 @@ func TestDockerImagesSHAorTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conf, err := configuration.GetProperties(context.TODO(), "../../build/conf/config-test.yaml", nil, &v1beta1.Syndesis{})
+			clientTools := syntesting.FakeClientTools()
+			conf, err := configuration.GetProperties(context.TODO(), "../../build/conf/config-test.yaml", clientTools, &v1beta1.Syndesis{})
 			require.NoError(t, err)
 
 			conf.Syndesis.SHA = tt.args.sha

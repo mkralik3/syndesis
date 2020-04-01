@@ -1,3 +1,4 @@
+{{ if not .ApiServer.Openshift }}
 - apiVersion: v1
   kind: Service
   metadata:
@@ -7,7 +8,6 @@
       syndesis.io/type: infrastructure
       syndesis.io/component: syndesis-oauthproxy
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: syndesis-oauthproxy-tls
     name: syndesis-oauthproxy
   spec:
     ports:
@@ -46,10 +46,9 @@
       spec:
         containers:
         - name: oauthproxy
-          image: '{{ dockerImageFromComponent .Syndesis.Components.Oauth.Image .Syndesis.SHA }}'
+          image: 'quay.io/pusher/oauth2_proxy:latest'
           args:
-            - --provider=openshift
-            - --client-id=system:serviceaccount:{{.OpenShiftProject}}:syndesis-oauth-client
+            - --cookie-name=oauth_proxy
             - --upstream=http://syndesis-server/api/
             - --upstream=http://syndesis-server/mapper/
             - --upstream=http://syndesis-ui/
@@ -66,24 +65,35 @@
             - --skip-auth-regex=/api/v1/version
             - --skip-auth-regex=/config.json
             - --skip-auth-preflight
-            - --openshift-ca=/etc/pki/tls/certs/ca-bundle.crt
-            - --openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-{{ if (not .Syndesis.Components.Oauth.DisableSarCheck) }}
-            - --openshift-sar={"namespace":"{{.Syndesis.Components.Oauth.SarNamespace}}","resource":"pods","verb":"get"}
-{{ end }}
+            - --email-domain=*
+            - --https-address=:8443
             # Disabled for now: --pass-user-bearer-token as this requires extra permission which only
             # can be given by a cluster-admin
+          #
+          # All of these env vars must be fetched from the {{.Syndesis.Components.Oauth.CredentialsSecret}}
+          # which should be loaded prior to the installation of the operator
+          #
           env:
+          - name: OAUTH2_PROXY_PROVIDER
+            valueFrom:
+              secretKeyRef:
+                name: {{.Syndesis.Components.Oauth.CredentialsSecret}}
+                key: OAUTH_PROVIDER
           - name: OAUTH2_PROXY_COOKIE_SECRET
             valueFrom:
               secretKeyRef:
-                name: syndesis-global-config
+                name: {{.Syndesis.Components.Oauth.CredentialsSecret}}
                 key: OAUTH_COOKIE_SECRET
+          - name: OAUTH2_PROXY_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{.Syndesis.Components.Oauth.CredentialsSecret}}
+                key: OAUTH_CLIENT_ID
           - name: OAUTH2_PROXY_CLIENT_SECRET
             valueFrom:
               secretKeyRef:
-                name: syndesis-global-config
-                key: OPENSHIFT_OAUTH_CLIENT_SECRET
+                name: {{.Syndesis.Components.Oauth.CredentialsSecret}}
+                key: OAUTH_CLIENT_SECRET
           ports:
           - containerPort: 8443
             name: public
@@ -114,4 +124,5 @@
         volumes:
         - name: syndesis-oauthproxy-tls
           secret:
-            secretName: syndesis-oauthproxy-tls
+            secretName: {{.Syndesis.Components.Oauth.CryptoCommsSecret}}
+{{ end }}
