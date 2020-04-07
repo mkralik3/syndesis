@@ -53,8 +53,8 @@
             - --upstream=http://syndesis-server/mapper/
             - --upstream=http://syndesis-ui/
             - --upstream=http://syndesis-dv/dv/
-            - --tls-cert=/etc/tls/private/tls.crt
-            - --tls-key=/etc/tls/private/tls.key
+            - --tls-cert-file=/etc/tls/private/tls.crt
+            - --tls-key-file=/etc/tls/private/tls.key
             - --pass-access-token
             - --skip-provider-button
             - --skip-auth-regex=/logout
@@ -70,7 +70,8 @@
             # Disabled for now: --pass-user-bearer-token as this requires extra permission which only
             # can be given by a cluster-admin
           #
-          # All of these env vars must be fetched from the {{.Syndesis.Components.Oauth.CredentialsSecret}}
+          # All of these env vars must be fetched from the syndesis-global-config and
+          # {{.Syndesis.Components.Oauth.CredentialsSecret}} secrets
           # which should be loaded prior to the installation of the operator
           #
           env:
@@ -82,7 +83,7 @@
           - name: OAUTH2_PROXY_COOKIE_SECRET
             valueFrom:
               secretKeyRef:
-                name: {{.Syndesis.Components.Oauth.CredentialsSecret}}
+                name: syndesis-global-config
                 key: OAUTH_COOKIE_SECRET
           - name: OAUTH2_PROXY_CLIENT_ID
             valueFrom:

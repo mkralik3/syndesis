@@ -61,8 +61,6 @@ func (a *installAction) CanExecute(syndesis *v1beta1.Syndesis) bool {
 var kindsReportedNotAvailable = map[schema.GroupVersionKind]time.Time{}
 
 func (a *installAction) Execute(ctx context.Context, syndesis *v1beta1.Syndesis) error {
-	fmt.Println("AM RUNNING THE INSTALL")
-
 	if syndesisPhaseIs(syndesis, v1beta1.SyndesisPhaseInstalling) {
 		a.log.Info("installing Syndesis resource", "name", syndesis.Name)
 	} else if syndesisPhaseIs(syndesis, v1beta1.SyndesisPhasePostUpgradeRun) {
@@ -76,6 +74,20 @@ func (a *installAction) Execute(ctx context.Context, syndesis *v1beta1.Syndesis)
 	config, err := configuration.GetProperties(ctx, configuration.TemplateConfig, a.clientTools, syndesis)
 	if err != nil {
 		a.log.Error(err, "Error occurred while initialising configuration")
+		return err
+	}
+
+	//
+	// Check for presence of route hostname as required for k8
+	//
+	if err := config.CheckRouteHostname(); err != nil {
+		return err
+	}
+
+	//
+	// Check for oauth secrets as required for k8
+	//
+	if err := config.CheckOAuthCredentialSecret(ctx, rtClient, syndesis); err != nil {
 		return err
 	}
 

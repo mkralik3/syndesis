@@ -590,9 +590,6 @@ k8s.io/kube-state-metrics/pkg/metric
 k8s.io/kube-state-metrics/pkg/metrics_store
 # k8s.io/kubectl v0.0.0 => k8s.io/kubectl v0.0.0-20191016120415-2ed914427d51
 k8s.io/kubectl/pkg/scheme
-# k8s.io/kubernetes v1.16.2
-k8s.io/kubernetes/pkg/apis/core
-k8s.io/kubernetes/pkg/apis/networking
 # k8s.io/utils v0.0.0-20191010214722-8d271d903fe4
 k8s.io/utils/buffer
 k8s.io/utils/integer

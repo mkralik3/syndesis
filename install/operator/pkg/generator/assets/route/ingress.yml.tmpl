@@ -1,10 +1,10 @@
+{{ if not .ApiServer.Openshift }}
 #
 # Ingress / Route used for plain kubernetes
 # - Syndesis.RouteHostname must be set to a value prior rendering
 #
-{{ if not .ApiServer.Openshift }}
 - apiVersion: networking.k8s.io/v1beta1
-  -  kind: Ingress
+  kind: Ingress
   metadata:
     labels:
       app: syndesis
@@ -15,21 +15,15 @@
       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     name: syndesis
   spec:
-    host: {{.Syndesis.RouteHostname}}
-      port:
-      targetPort: 8443
-    host: {{.Syndesis.RouteHostname}}
-    port:
-      targetPort: 8443
-    tls:
-    - hosts:
-      - {{.Syndesis.RouteHostname}}
-      secretName: syndesis-oauthproxy-tls
     rules:
     - host: {{.Syndesis.RouteHostname}}
       http:
         paths:
         - backend:
-          serviceName: syndesis-oauthproxy
-          servicePort: 8443
+            serviceName: syndesis-oauthproxy
+            servicePort: 8443
+    tls:
+    - secretName: {{.Syndesis.Components.Oauth.CryptoCommsSecret}}
+      hosts:
+        - {{.Syndesis.RouteHostname}}
 {{ end }}

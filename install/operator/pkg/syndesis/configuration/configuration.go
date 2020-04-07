@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/imdario/mergo"
+	errs "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -348,7 +349,7 @@ func IsPlatformOpenshift(apiClient kubernetes.Interface) (bool, error) {
 	return false, nil
 }
 
-func (config *Config) checkRouteHostname() error {
+func (config *Config) CheckRouteHostname() error {
 	if config.ApiServer.Openshift {
 		//
 		// Openshift will set the RouteHostname if not defined by the CR
@@ -366,7 +367,7 @@ func (config *Config) checkRouteHostname() error {
 
 func findSecret(ctx context.Context, rtClient client.Client, secretName string, namespace string) error {
 	if len(secretName) == 0 {
-		return fmt.Errorf("The operator is expecting a secret named '%s' but this has not been specified.", secretName)
+		return fmt.Errorf("The operator is expecting a name of a secret but none has not been specified.")
 	}
 
 	secret := &corev1.Secret{}
@@ -381,7 +382,7 @@ func findSecret(ctx context.Context, rtClient client.Client, secretName string, 
 	return nil
 }
 
-func (config *Config) checkOAuthCredentialSecret(ctx context.Context, rtClient client.Client, syndesis *v1beta1.Syndesis) error {
+func (config *Config) CheckOAuthCredentialSecret(ctx context.Context, rtClient client.Client, syndesis *v1beta1.Syndesis) error {
 	if config.ApiServer.Openshift {
 		//
 		// Openshift has the OAuth credentials set to the internal
@@ -393,12 +394,12 @@ func (config *Config) checkOAuthCredentialSecret(ctx context.Context, rtClient c
 
 	// Check credentials secret is present
 	if err := findSecret(ctx, rtClient, config.Syndesis.Components.Oauth.CredentialsSecret, syndesis.Namespace); err != nil {
-		return err
+		return errs.Wrap(err, "Failed to find the oauth credentials secret")
 	}
 
 	// Check crypto tls secret is present
 	if err := findSecret(ctx, rtClient, config.Syndesis.Components.Oauth.CryptoCommsSecret, syndesis.Namespace); err != nil {
-		return err
+		return errs.Wrap(err, "Failed to find the oauth TLS secret")
 	}
 
 	return nil
@@ -463,16 +464,6 @@ func GetProperties(ctx context.Context, file string, clientTools *clienttools.Cl
 
 	if err := configuration.setSyndesisFromCustomResource(syndesis); err != nil {
 		return nil, err
-	}
-
-	if err := configuration.checkRouteHostname(); err != nil {
-		return nil, err
-	}
-
-	if rtClient != nil {
-		if err := configuration.checkOAuthCredentialSecret(ctx, rtClient, syndesis); err != nil {
-			return nil, err
-		}
 	}
 
 	if rtClient == nil || len(syndesis.Spec.Components.Database.ExternalDbURL) > 0 {
@@ -574,7 +565,7 @@ func (config *Config) loadFromFile(file string) error {
 func (config *Config) SetRoute(ctx context.Context, specRouteHostname string) error {
 	if os.Getenv("ROUTE_HOSTNAME") == "" {
 		config.Syndesis.RouteHostname = specRouteHostname
-		if err := config.checkRouteHostname(); err != nil {
+		if err := config.CheckRouteHostname(); err != nil {
 			return err
 		}
 	} else {

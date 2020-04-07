@@ -18,9 +18,9 @@ package action
 
 import (
 	osv1 "github.com/openshift/api/route/v1"
+	k8v1 "k8s.io/api/networking/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	net "k8s.io/kubernetes/pkg/apis/networking"
 )
 
 //
@@ -35,7 +35,7 @@ type Conduit interface {
 }
 
 func ConduitWithName(resource runtime.Object, name string) (Conduit, bool) {
-	if route, ok := resource.(*net.Ingress); ok {
+	if route, ok := resource.(*k8v1.Ingress); ok {
 		if route.Name == name {
 			return IngressConduit{ingress: route}, true
 		}
@@ -79,7 +79,7 @@ func (ra RouteConduit) Host() string {
 // Ingress implementation
 //
 type IngressConduit struct {
-	ingress *net.Ingress
+	ingress *k8v1.Ingress
 }
 
 func (ia IngressConduit) Target() runtime.Object {
